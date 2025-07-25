@@ -1,130 +1,60 @@
--- Crear el ScreenGui
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "ExploitMenu"
-screenGui.Parent = game:GetService("CoreGui")
+local HttpService = game:GetService("HttpService")
+local TeleportService = game:GetService("TeleportService")
+local Players = game:GetService("Players")
 
--- Crear la bola de cliente
-local ball = Instance.new("Part")
-ball.Size = Vector3.new(2, 2, 2)
-ball.Position = Vector3.new(0, 5, 0)
-ball.Anchored = true
-ball.CanCollide = false
-ball.Parent = workspace
+local placeID = 12345678 -- Reemplaza con el ID de tu experiencia en Roblox
+local webhookURL = "https://discord.com/api/webhooks/1398416080904650895/IDGXaUKOWrnkQs3yHD_kIGwwpjvGOxo8WcmGFhq7CxWKr1Om5K8P5-uadnz1-cz0PgZD"
 
-local ballMesh = Instance.new("SpecialMesh")
-ballMesh.MeshType = Enum.MeshType.Sphere
-ballMesh.Parent = ball
-
-local ballMaterial = Instance.new("SelectionBox")
-ballMaterial.Adornee = ball
-ballMaterial.Color3 = Color3.new(1, 0, 0)
-ballMaterial.Parent = ball
-
--- Crear el contenedor principal del menú
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 300, 0, 400)
-mainFrame.Position = UDim2.new(0, -300, 0, 50)
-mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-mainFrame.Visible = false
-mainFrame.Parent = screenGui
-
--- Crear las secciones del menú
-local sections = {
-    "Main",
-    "Stelear",
-    "Helper",
-    "Player"
-}
-
-for _, section in ipairs(sections) do
-    local sectionButton = Instance.new("TextButton")
-    sectionButton.Size = UDim2.new(1, 0, 0, 50)
-    sectionButton.Position = UDim2.new(0, 0, 0, (sections.indexOf(section) - 1) * 50)
-    sectionButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    sectionButton.Text = section
-    sectionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-    sectionButton.Parent = mainFrame
-end
-
--- Funcionalidad para abrir/cerrar el menú al hacer clic en la bola
-ball.Touched:Connect(function(hit)
-    local player = game.Players:GetPlayerFromCharacter(hit.Parent)
-    if player then
-        mainFrame.Visible = not mainFrame.Visible
+-- Crear o actualizar el botón
+local function mostrarBoton(data)
+    if not data or data.players >= data.max_players then
+        return
     end
-end)
 
--- Hacer el menú movible
-local dragging
-local dragInput
-local dragStart
-local startPos
+    local gui = Players.LocalPlayer:FindFirstChild("PlayerGui"):FindFirstChild("BrainrotTeleportUI")
+    if gui then
+        gui:Destroy()
+    end
 
-local function update(input)
-    local delta = input.Position - dragStart
-    mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "BrainrotTeleportUI"
+    screenGui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
+
+    local boton = Instance.new("TextButton")
+    boton.Size = UDim2.new(0, 260, 0, 50)
+    boton.Position = UDim2.new(0.5, -130, 0.85, 0)
+    boton.Text = "Unirse al servidor: " .. data.brainrot_type .. " 🧠 $" .. tostring(data.earnings)
+    boton.BackgroundColor3 = Color3.fromRGB(255, 200, 0)
+    boton.TextScaled = true
+    boton.Parent = screenGui
+
+    boton.MouseButton1Click:Connect(function()
+        TeleportService:TeleportToPlaceInstance(placeID, data.job_id, Players.LocalPlayer)
+    end)
 end
 
-mainFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        dragging = true
-        dragStart = input.Position
-        startPos = mainFrame.Position
-
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
-            end
+-- Bucle para escanear cada 2 segundos
+spawn(function()
+    while true do
+        local rawResponse
+        pcall(function()
+            rawResponse = HttpService:GetAsync(webhookURL)
         end)
-    end
-end)
 
-mainFrame.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement then
-        dragInput = input
-    end
-end)
+        if rawResponse then
+            local data
+            pcall(function()
+                data = HttpService:JSONDecode(rawResponse)
+            end)
 
-game:GetService("UserInputService").InputChanged:Connect(function(input)
-    if input == dragInput and dragging then
-        update(input)
-    end
-end)
-
--- Funcionalidades para cada sección
-local function onMainSectionClicked()
-    -- Lógica para la sección Main
-    print("Main section clicked")
-end
-
-local function onStelearSectionClicked()
-    -- Lógica para la sección Stelear
-    print("Stelear section clicked")
-end
-
-local function onHelperSectionClicked()
-    -- Lógica para la sección Helper
-    print("Helper section clicked")
-end
-
-local function onPlayerSectionClicked()
-    -- Lógica para la sección Player
-    print("Player section clicked")
-end
-
--- Conectar las funciones a los botones de las secciones
-mainFrame.ChildAdded:Connect(function(child)
-    if child:IsA("TextButton") then
-        child.MouseButton1Click:Connect(function()
-            if child.Text == "Main" then
-                onMainSectionClicked()
-            elseif child.Text == "Stelear" then
-                onStelearSectionClicked()
-            elseif child.Text == "Helper" then
-                onHelperSectionClicked()
-            elseif child.Text == "Player" then
-                onPlayerSectionClicked()
+            if data and data.job_id and data.brainrot_type and data.players and data.max_players and data.earnings then
+                mostrarBoton(data)
             end
-        end)
+        else
+            warn("Error al consultar el webhook.")
+        end
+
+        wait(2)
     end
 end)
+
