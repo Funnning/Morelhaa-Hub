@@ -1,118 +1,130 @@
--- URL del webhook de Discord
-local webhookUrl = "https://discord.com/api/webhooks/1398416080904650895/IDGXaUKOWrnkQs3yHD_kIGwwpjvGOxo8WcmGFhq7CxWKr1Om5K8P5-uadnz1-cz0PgZD"
+-- Crear el ScreenGui
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "ExploitMenu"
+screenGui.Parent = game:GetService("CoreGui")
 
--- Función para enviar una alerta al webhook de Discord
-local function sendWebhookAlert(data)
-    local httpService = game:GetService("HttpService")
-    local jsonData = httpService:JSONEncode(data)
-    local response = httpService:PostAsync(webhookUrl, jsonData, Enum.HttpContentType.ApplicationJson)
-    return response
+-- Crear la bola de cliente
+local ball = Instance.new("Part")
+ball.Size = Vector3.new(2, 2, 2)
+ball.Position = Vector3.new(0, 5, 0)
+ball.Anchored = true
+ball.CanCollide = false
+ball.Parent = workspace
+
+local ballMesh = Instance.new("SpecialMesh")
+ballMesh.MeshType = Enum.MeshType.Sphere
+ballMesh.Parent = ball
+
+local ballMaterial = Instance.new("SelectionBox")
+ballMaterial.Adornee = ball
+ballMaterial.Color3 = Color3.new(1, 0, 0)
+ballMaterial.Parent = ball
+
+-- Crear el contenedor principal del menú
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(0, 300, 0, 400)
+mainFrame.Position = UDim2.new(0, -300, 0, 50)
+mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+mainFrame.Visible = false
+mainFrame.Parent = screenGui
+
+-- Crear las secciones del menú
+local sections = {
+    "Main",
+    "Stelear",
+    "Helper",
+    "Player"
+}
+
+for _, section in ipairs(sections) do
+    local sectionButton = Instance.new("TextButton")
+    sectionButton.Size = UDim2.new(1, 0, 0, 50)
+    sectionButton.Position = UDim2.new(0, 0, 0, (sections.indexOf(section) - 1) * 50)
+    sectionButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    sectionButton.Text = section
+    sectionButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    sectionButton.Parent = mainFrame
 end
 
--- Función para detectar el brainrot más rentable
-local function detectMostProfitableBrainrot()
-    local brainrots = workspace:FindFirstChild("Brainrots") -- Ajusta esto según la estructura de tu juego
-    local mostProfitableBrainrot = nil
-    local maxEarnings = 0
-
-    for _, brainrot in ipairs(brainrots:GetChildren()) do
-        local earningsPerSecond = brainrot.EarningsPerSecond.Value -- Ajusta esto según la propiedad que almacene las ganancias
-        if earningsPerSecond > maxEarnings then
-            maxEarnings = earningsPerSecond
-            mostProfitableBrainrot = brainrot
-        end
+-- Funcionalidad para abrir/cerrar el menú al hacer clic en la bola
+ball.Touched:Connect(function(hit)
+    local player = game.Players:GetPlayerFromCharacter(hit.Parent)
+    if player then
+        mainFrame.Visible = not mainFrame.Visible
     end
+end)
 
-    return mostProfitableBrainrot, maxEarnings
+-- Hacer el menú movible
+local dragging
+local dragInput
+local dragStart
+local startPos
+
+local function update(input)
+    local delta = input.Position - dragStart
+    mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
 end
 
--- Función para obtener la lista de jugadores conectados
-local function getConnectedPlayers()
-    local players = {}
-    for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
-        table.insert(players, player.Name)
+mainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = mainFrame.Position
+
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
     end
-    return players
-end
+end)
 
--- Función para obtener el JobId del servidor
-local function getJobId()
-    return game.JobId
-end
-
--- Función principal para enviar alerta al webhook
-local function sendBrainrotAlert()
-    local brainrot, earningsPerSecond = detectMostProfitableBrainrot()
-    if brainrot then
-        local alertData = {
-            content = "Nuevo brainrot rentable detectado!",
-            embeds = {
-                {
-                    title = "Brainrot más rentable",
-                    fields = {
-                        { name = "Nombre", value = brainrot.Name, inline = true },
-                        { name = "Dinero por segundo", value = tostring(earningsPerSecond), inline = true },
-                        { name = "Jugadores conectados", value = table.concat(getConnectedPlayers(), ", "), inline = false },
-                        { name = "JobId", value = tostring(getJobId()), inline = true }
-                    }
-                }
-            }
-        }
-        sendWebhookAlert(alertData)
+mainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
     end
-end
+end)
 
--- Función para crear la interfaz GUI "Morelha Hub"
-local function createMorelhaHub()
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "MorelhaHub"
-    screenGui.Parent = game:GetService("CoreGui")
-
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Size = UDim2.new(0, 300, 0, 200)
-    mainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
-    mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-    mainFrame.Parent = screenGui
-
-    local mainLabel = Instance.new("TextLabel")
-    mainLabel.Size = UDim2.new(1, 0, 0, 50)
-    mainLabel.Position = UDim2.new(0, 0, 0, 0)
-    mainLabel.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-    mainLabel.Text = "Select Items to Buy"
-    mainLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-    mainLabel.Parent = mainFrame
-
-    -- Agrega más elementos a la interfaz según sea necesario
-end
-
--- Función para enviar datos del servidor al webhook al ejecutar el script
-local function sendServerDataOnStart()
-    local serverData = {
-        content = "Datos del servidor al iniciar el script:",
-        embeds = {
-            {
-                title = "Información del servidor",
-                fields = {
-                    { name = "Jugadores conectados", value = table.concat(getConnectedPlayers(), ", "), inline = false },
-                    { name = "JobId", value = tostring(getJobId()), inline = true }
-                }
-            }
-        }
-    }
-    sendWebhookAlert(serverData)
-end
-
--- Función para unirse automáticamente al servidor si tiene 7/8 jugadores
-local function autoJoinIfSevenEightPlayers()
-    local players = getConnectedPlayers()
-    if #players == 7 or #players == 8 then
-        -- Lógica para unirte al servidor
-        print("Uniéndome al servidor automáticamente...")
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        update(input)
     end
+end)
+
+-- Funcionalidades para cada sección
+local function onMainSectionClicked()
+    -- Lógica para la sección Main
+    print("Main section clicked")
 end
 
--- Ejecutar las funciones al iniciar el script
-createMorelhaHub()
-sendServerDataOnStart()
-autoJoinIfSevenEightPlayers()
-sendBrainrotAlert()
+local function onStelearSectionClicked()
+    -- Lógica para la sección Stelear
+    print("Stelear section clicked")
+end
+
+local function onHelperSectionClicked()
+    -- Lógica para la sección Helper
+    print("Helper section clicked")
+end
+
+local function onPlayerSectionClicked()
+    -- Lógica para la sección Player
+    print("Player section clicked")
+end
+
+-- Conectar las funciones a los botones de las secciones
+mainFrame.ChildAdded:Connect(function(child)
+    if child:IsA("TextButton") then
+        child.MouseButton1Click:Connect(function()
+            if child.Text == "Main" then
+                onMainSectionClicked()
+            elseif child.Text == "Stelear" then
+                onStelearSectionClicked()
+            elseif child.Text == "Helper" then
+                onHelperSectionClicked()
+            elseif child.Text == "Player" then
+                onPlayerSectionClicked()
+            end
+        end)
+    end
+end)
