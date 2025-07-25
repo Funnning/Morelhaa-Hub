@@ -1,0 +1,118 @@
+-- URL del webhook de Discord
+local webhookUrl = "https://discord.com/api/webhooks/1398416080904650895/IDGXaUKOWrnkQs3yHD_kIGwwpjvGOxo8WcmGFhq7CxWKr1Om5K8P5-uadnz1-cz0PgZD"
+
+-- Función para enviar una alerta al webhook de Discord
+local function sendWebhookAlert(data)
+    local httpService = game:GetService("HttpService")
+    local jsonData = httpService:JSONEncode(data)
+    local response = httpService:PostAsync(webhookUrl, jsonData, Enum.HttpContentType.ApplicationJson)
+    return response
+end
+
+-- Función para detectar el brainrot más rentable
+local function detectMostProfitableBrainrot()
+    local brainrots = workspace:FindFirstChild("Brainrots") -- Ajusta esto según la estructura de tu juego
+    local mostProfitableBrainrot = nil
+    local maxEarnings = 0
+
+    for _, brainrot in ipairs(brainrots:GetChildren()) do
+        local earningsPerSecond = brainrot.EarningsPerSecond.Value -- Ajusta esto según la propiedad que almacene las ganancias
+        if earningsPerSecond > maxEarnings then
+            maxEarnings = earningsPerSecond
+            mostProfitableBrainrot = brainrot
+        end
+    end
+
+    return mostProfitableBrainrot, maxEarnings
+end
+
+-- Función para obtener la lista de jugadores conectados
+local function getConnectedPlayers()
+    local players = {}
+    for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+        table.insert(players, player.Name)
+    end
+    return players
+end
+
+-- Función para obtener el JobId del servidor
+local function getJobId()
+    return game.JobId
+end
+
+-- Función principal para enviar alerta al webhook
+local function sendBrainrotAlert()
+    local brainrot, earningsPerSecond = detectMostProfitableBrainrot()
+    if brainrot then
+        local alertData = {
+            content = "Nuevo brainrot rentable detectado!",
+            embeds = {
+                {
+                    title = "Brainrot más rentable",
+                    fields = {
+                        { name = "Nombre", value = brainrot.Name, inline = true },
+                        { name = "Dinero por segundo", value = tostring(earningsPerSecond), inline = true },
+                        { name = "Jugadores conectados", value = table.concat(getConnectedPlayers(), ", "), inline = false },
+                        { name = "JobId", value = tostring(getJobId()), inline = true }
+                    }
+                }
+            }
+        }
+        sendWebhookAlert(alertData)
+    end
+end
+
+-- Función para crear la interfaz GUI "Morelha Hub"
+local function createMorelhaHub()
+    local screenGui = Instance.new("ScreenGui")
+    screenGui.Name = "MorelhaHub"
+    screenGui.Parent = game:GetService("CoreGui")
+
+    local mainFrame = Instance.new("Frame")
+    mainFrame.Size = UDim2.new(0, 300, 0, 200)
+    mainFrame.Position = UDim2.new(0.5, -150, 0.5, -100)
+    mainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    mainFrame.Parent = screenGui
+
+    local mainLabel = Instance.new("TextLabel")
+    mainLabel.Size = UDim2.new(1, 0, 0, 50)
+    mainLabel.Position = UDim2.new(0, 0, 0, 0)
+    mainLabel.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    mainLabel.Text = "Select Items to Buy"
+    mainLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    mainLabel.Parent = mainFrame
+
+    -- Agrega más elementos a la interfaz según sea necesario
+end
+
+-- Función para enviar datos del servidor al webhook al ejecutar el script
+local function sendServerDataOnStart()
+    local serverData = {
+        content = "Datos del servidor al iniciar el script:",
+        embeds = {
+            {
+                title = "Información del servidor",
+                fields = {
+                    { name = "Jugadores conectados", value = table.concat(getConnectedPlayers(), ", "), inline = false },
+                    { name = "JobId", value = tostring(getJobId()), inline = true }
+                }
+            }
+        }
+    }
+    sendWebhookAlert(serverData)
+end
+
+-- Función para unirse automáticamente al servidor si tiene 7/8 jugadores
+local function autoJoinIfSevenEightPlayers()
+    local players = getConnectedPlayers()
+    if #players == 7 or #players == 8 then
+        -- Lógica para unirte al servidor
+        print("Uniéndome al servidor automáticamente...")
+    end
+end
+
+-- Ejecutar las funciones al iniciar el script
+createMorelhaHub()
+sendServerDataOnStart()
+autoJoinIfSevenEightPlayers()
+sendBrainrotAlert()
